@@ -2,13 +2,13 @@ import argparse
 import os
 import time
 import numpy as np
-import data
+from detector import data
 from importlib import import_module
 import shutil
-from utils import *
+from detector.utils import *
 import sys
 sys.path.append('../')
-from split_combine import SplitComb
+from detector.split_combine import SplitComb
 
 import torch
 from torch.nn import DataParallel
@@ -16,12 +16,12 @@ from torch.backends import cudnn
 from torch.utils.data import DataLoader
 from torch import optim
 from torch.autograd import Variable
-# from config_training import config as config_training
+from config_training import config as config_training
 
-from layers import acc
+from detector.layers import acc
 
 parser = argparse.ArgumentParser(description='PyTorch DataBowl3 Detector')
-parser.add_argument('--model', '-m', metavar='MODEL', default='base',
+parser.add_argument('--model', '-m', metavar='MODEL', default='dpn3d26',
                     help='model')
 parser.add_argument('--config', '-c', default='config_training', type=str)
 parser.add_argument('-j', '--workers', default=30, type=int, metavar='N',
@@ -40,11 +40,11 @@ parser.add_argument('--weight-decay', '--wd', default=1e-4, type=float,
                     metavar='W', help='weight decay (default: 1e-4)')
 parser.add_argument('--save-freq', default='1', type=int, metavar='S',
                     help='save frequency')
-parser.add_argument('--resume', default='', type=str, metavar='PATH',
+parser.add_argument('--resume', default='/home/cougarnet.uh.edu/mpadmana/DeepLung_original/detector/dpnmodel/fd9044.ckpt', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
 parser.add_argument('--save-dir', default='', type=str, metavar='SAVE',
                     help='directory to save checkpoint (default: none)')
-parser.add_argument('--test', default=0, type=int, metavar='TEST',
+parser.add_argument('--test', default=1, type=int, metavar='TEST',
                     help='1 do test evaluation, 0 not')
 parser.add_argument('--testthresh', default=-3, type=float,
                     help='threshod for get pbb')
@@ -99,30 +99,33 @@ def main():
     args.n_gpu = n_gpu
     net = net.cuda()
     loss = loss.cuda()
-    cudnn.benchmark = False #True
+    cudnn.benchmark = False                     #True
     net = DataParallel(net)
     traindatadir = config_training['train_preprocess_result_path']
     valdatadir = config_training['val_preprocess_result_path']
     testdatadir = config_training['test_preprocess_result_path']
     trainfilelist = []
-    print config_training['train_data_path']
     for folder in config_training['train_data_path']:
-        print folder
+        print (folder)
         for f in os.listdir(folder):
             if f.endswith('.mhd') and f[:-4] not in config_training['black_list']:
-                trainfilelist.append(folder.split('/')[-2]+'/'+f[:-4])
+                if (f=="1.3.6.1.4.1.14519.5.2.1.6279.6001.105756658031515062000744821260.mhd"):
+                    trainfilelist.append(folder.split('/')[-2]+'/'+f[:-4])
     valfilelist = []
     for folder in config_training['val_data_path']:
         for f in os.listdir(folder):
             if f.endswith('.mhd') and f[:-4] not in config_training['black_list']:
-                valfilelist.append(folder.split('/')[-2]+'/'+f[:-4])
+                if (f=="1.3.6.1.4.1.14519.5.2.1.6279.6001.100684836163890911914061745866.mhd"):
+                    valfilelist.append(folder.split('/')[-2]+'/'+f[:-4])
     testfilelist = []
     for folder in config_training['test_data_path']:
         for f in os.listdir(folder):
             if f.endswith('.mhd') and f[:-4] not in config_training['black_list']:
-                testfilelist.append(folder.split('/')[-2]+'/'+f[:-4])
+                if (f=="1.3.6.1.4.1.14519.5.2.1.6279.6001.100621383016233746780170740405.mhd"):
+                    testfilelist.append(folder.split('/')[-2]+'/'+f[:-4])
     
     if args.test == 1:
+
         margin = 32
         sidelen = 144
         import data
@@ -146,10 +149,11 @@ def main():
                 break
         
         test(test_loader, net, get_pbb, save_dir,config)
+
         return
     #net = DataParallel(net)
-    import data
-    print len(trainfilelist)
+    from detector import data
+    print(len(trainfilelist))
     dataset = data.DataBowl3Detector(
         traindatadir,
         trainfilelist,
@@ -304,6 +308,8 @@ def test(data_loader, net, get_pbb, save_dir, config):
     namelist = []
     split_comber = data_loader.dataset.split_comber
     for i_name, (data, target, coord, nzhw) in enumerate(data_loader):
+        print
+        print("I am at iteration "+str(i_name))
         s = time.time()
         target = [np.asarray(t, np.float32) for t in target]
         lbb = target[0]
@@ -339,7 +345,7 @@ def test(data_loader, net, get_pbb, save_dir, config):
             feature = split_comber.combine(feature,sidelen)[...,0]
 
         thresh = args.testthresh # -8 #-3
-        print 'pbb thresh', thresh
+        print('pbb thresh', thresh)
         pbb,mask = get_pbb(output,thresh,ismask=True)
         if isfeat:
             feature_selected = feature[mask[0],mask[1],mask[2]]

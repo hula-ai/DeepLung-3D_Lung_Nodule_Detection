@@ -5,7 +5,7 @@ import os
 import time
 import collections
 import random
-from layers import iou
+from detector.layers import iou
 from scipy.ndimage import zoom
 import warnings
 from scipy.ndimage.interpolation import rotate
@@ -33,10 +33,9 @@ class DataBowl3Detector(Dataset):
         # print self.filenames
         self.kagglenames = [f for f in self.filenames]# if len(f.split('/')[-1].split('_')[0])>20]
         # self.lunanames = [f for f in self.filenames if len(f.split('/')[-1].split('_')[0])<20]
-        
         labels = []
         
-        print len(idcs)
+        print(len(idcs))
         for idx in idcs:
             # print data_dir, idx
             l = np.load(data_dir+idx+'_label.npy')
@@ -126,7 +125,7 @@ class DataBowl3Detector(Dataset):
 
     def __len__(self):
         if self.phase == 'train':
-            return len(self.bboxes)/(1-self.r_rand)
+            return int(len(self.bboxes)/(1-self.r_rand))
         elif self.phase =='val':
             return len(self.bboxes)
         else:
@@ -274,7 +273,7 @@ class LabelMapping(object):
         output_size = []
         for i in range(3):
             if input_size[i] % stride != 0:
-                print filename
+                print(filename)
             # assert(input_size[i] % stride == 0) 
             output_size.append(input_size[i] / stride)
         

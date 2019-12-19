@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
-from layers import *
+from detector.layers import *
 config = {}
 config['anchors'] = [5., 10., 20.] #[ 10.0, 30.0, 60.]
 config['chanel'] = 1
@@ -26,7 +26,7 @@ config['pad_value'] = 170
 config['augtype'] = {'flip':True,'swap':False,'scale':True,'rotate':False}
 config['augtype'] = {'flip':True,'swap':False,'scale':True,'rotate':False}
 config['blacklist'] = ['868b024d9fa388b7ddab12ec1c06af38','990fbe3f0a1b53878669967b9afd1441','adc3bbc63d40f8761c59be10f1e504c3']
-debug = True #True #True#False #True
+debug = True                                                                                                           #True #True#False #True
 
 class Bottleneck(nn.Module):
     def __init__(self, last_planes, in_planes, out_planes, dense_depth, stride, first_layer):
@@ -52,23 +52,23 @@ class Bottleneck(nn.Module):
 
     def forward(self, x):
         if debug:
-            print 'bottleneck_0', x.size(), self.last_planes, self.in_planes, 1
+            print ('bottleneck_0', x.size(), self.last_planes, self.in_planes, 1)
         out = F.relu(self.bn1(self.conv1(x)))
         if debug:
-            print 'bottleneck_1', out.size(), self.in_planes, self.in_planes, 3
+            print ('bottleneck_1', out.size(), self.in_planes, self.in_planes, 3)
         out = F.relu(self.bn2(self.conv2(out)))
         if debug:
-            print 'bottleneck_2', out.size(), self.in_planes, self.out_planes+self.dense_depth, 1
+            print( 'bottleneck_2', out.size(), self.in_planes, self.out_planes+self.dense_depth, 1)
         out = self.bn3(self.conv3(out))
         if debug:
-            print 'bottleneck_3', out.size()
+            print ('bottleneck_3', out.size())
         x = self.shortcut(x)
         d = self.out_planes
         if debug:
-            print 'bottleneck_4', x.size(), self.last_planes, self.out_planes+self.dense_depth, d
+            print ('bottleneck_4', x.size(), self.last_planes, self.out_planes+self.dense_depth, d)
         out = torch.cat([x[:,:d,:,:]+out[:,:d,:,:], x[:,d:,:,:], out[:,d:,:,:]], 1)
         if debug:
-            print 'bottleneck_5', out.size()
+            print ('bottleneck_5', out.size())
         out = F.relu(out)
         return out
 
@@ -120,35 +120,35 @@ class DPN(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x, coord):
-        if debug: print '0', x.size(), 64#, coord.size
+        if debug: print ('0', x.size(), 64)#, coord.size)
         out0 = F.relu(self.bn1(self.conv1(x)))
-        if debug: print '1', out0.size()
+        if debug: print ('1', out0.size())
         out1 = self.layer1(out0)
-        if debug: print '2', out1.size()
+        if debug: print ('2', out1.size())
         out2 = self.layer2(out1)
-        if debug: print '3', out2.size()
+        if debug: print ('3', out2.size())
         out3 = self.layer3(out2)
-        if debug: print '4', out3.size()
+        if debug: print ('4', out3.size())
         out4 = self.layer4(out3)
-        if debug: print '5', out4.size()
+        if debug: print ('5', out4.size())
 
         out5 = self.path1(out4)
-        if debug: print '6', out5.size(), torch.cat((out3, out5), 1).size()
+        if debug: print ('6', out5.size(), torch.cat((out3, out5), 1).size())
         out6 = self.layer5(torch.cat((out3, out5), 1))
-        if debug: print '7', out6.size()
+        if debug: print( '7', out6.size())
         out7 = self.path2(out6)
-        if debug: print '8', out7.size(), torch.cat((out2, out7), 1).size() #torch.cat((out2, out7, coord), 1).size()
+        if debug: print ('8', out7.size(), torch.cat((out2, out7), 1).size()) #torch.cat((out2, out7, coord), 1).size()
         out8 = self.layer6(torch.cat((out2, out7, coord), 1))
-        if debug: print '9', out8.size()
+        if debug: print ('9', out8.size())
         comb2 = self.drop(out8)
         out = self.output(comb2)
-        if debug: print '10', out.size()
+        if debug: print ('10', out.size())
         size = out.size()
         out = out.view(out.size(0), out.size(1), -1)
-        if debug: print '11', out.size()
+        if debug: print ('11', out.size())
         #out = out.transpose(1, 4).transpose(1, 2).transpose(2, 3).contiguous()
         out = out.transpose(1, 2).contiguous().view(size[0], size[2], size[3], size[4], len(config['anchors']), 5)
-        if debug: print '12', out.size()
+        if debug: print ('12', out.size())
         return out#, out_1
 
 def DPN92_3D():

@@ -1,5 +1,5 @@
 import numpy as np
-from layers import nms, iou, acc
+from detector.layers import nms, iou, acc
 import time
 import multiprocessing as mp
 

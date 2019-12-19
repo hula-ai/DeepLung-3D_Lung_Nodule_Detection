@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-from layers import *
+from detector.layers import *
 
 config = {}
 config['anchors'] = [5., 10., 20.] #[ 10.0, 30.0, 60.]
