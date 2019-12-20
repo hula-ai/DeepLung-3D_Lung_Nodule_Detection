@@ -1,14 +1,17 @@
+import sys
+sys.path.append(".")
 import argparse
 import os
 import time
 import numpy as np
-from detector import data
+import data
 from importlib import import_module
 import shutil
-from detector.utils import *
-import sys
+from utils import *
+
 sys.path.append('../')
-from detector.split_combine import SplitComb
+
+from split_combine import SplitComb
 
 import torch
 from torch.nn import DataParallel
@@ -18,7 +21,7 @@ from torch import optim
 from torch.autograd import Variable
 from config_training import config as config_training
 
-from detector.layers import acc
+from layers import acc
 
 parser = argparse.ArgumentParser(description='PyTorch DataBowl3 Detector')
 parser.add_argument('--model', '-m', metavar='MODEL', default='dpn3d26',
