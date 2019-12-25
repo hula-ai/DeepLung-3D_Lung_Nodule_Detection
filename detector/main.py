@@ -309,8 +309,10 @@ def test(data_loader, net, get_pbb, save_dir, config):
     for i_name, (data, target, coord, nzhw) in enumerate(data_loader):
         print
         print("I am at iteration "+str(i_name))
-        s = time.time()
         
+        s = time.time()
+        data1=[np.asarray(d, np.float32) for d in data]
+        print("Shape of input: "+str(np.array(data1).shape))
         target = [np.asarray(t, np.float32) for t in target]
         print("TARGET IS: "+ str(target))
         lbb = target[0]
@@ -356,17 +358,18 @@ def test(data_loader, net, get_pbb, save_dir, config):
         tp,fp,fn,_ = acc(pbb,lbb,0,0.5,0.5)
         print("The lengths of TRUE POSITIVES and FALSE POSITIVES are: ")
         print(len(tp),len(fp))
-        with open (os.path.join(save_dir,name+'_tp.txt'),'a+') as f:
-            f.write("The predicted bounding boxes are:\n")
-            for bb in range(len(tp)):
-                f.write(str(tp[bb][1:5])+'\n')
-            f.write('\n')
-            f.write('\n')
-            f.write('\n')
-            f.write("The ground truth bounding boxes are: \n")
-            for box in range(len(target)):
-                f.write(str(target[box])+'\n')
-        f.close()
+        if not os.path.exists(os.path.join(save_dir,name+'_tp.txt')):
+            with open (os.path.join(save_dir,name+'_tp.txt'),'a+') as f:
+                f.write("The predicted bounding boxes are:\n")
+                for bb in range(len(tp)):
+                    f.write(str(tp[bb][1:5])+'\n')
+                f.write('\n')
+                f.write('\n')
+                f.write('\n')
+                f.write("The ground truth bounding boxes are: \n")
+                for box in range(len(target)):
+                    f.write(str(target[box])+'\n')
+            f.close()
         print([i_name,name])
         e = time.time()
         np.save(os.path.join(save_dir, name+'_pbb.npy'), pbb)
