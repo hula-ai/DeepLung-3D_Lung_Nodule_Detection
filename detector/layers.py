@@ -221,7 +221,7 @@ class GetPBB(object):
         self.stride = config['stride']
         self.anchors = np.asarray(config['anchors'])
 
-    def __call__(self, output,thresh = -3, ismask=False):
+    def __call__(self, output,thresh = -2, ismask=False):
         stride = self.stride
         anchors = self.anchors
         output = np.copy(output)
@@ -257,7 +257,7 @@ def nms(output, nms_th):
         bbox = output[i]
         flag = 1
         for j in range(len(bboxes)):
-            if iou(bbox[1:5], bboxes[j][1:5]) >= nms_th:
+            if iou(bbox[1:5], bboxes[j][1:5]) >= 0.8:
                 flag = -1
                 break
         if flag == 1:
@@ -305,8 +305,10 @@ def acc(pbb, lbb, conf_th, nms_th, detect_th):
             if l_flag[besti] == 0:
                 l_flag[besti] = 1
                 tp.append(np.concatenate([p,[bestscore]],0))
+                
             else:
                 fp.append(np.concatenate([p,[bestscore]],0))
+                
         if flag == 0:
             fp.append(np.concatenate([p,[bestscore]],0))
     for i,l in enumerate(lbb):
@@ -320,7 +322,7 @@ def acc(pbb, lbb, conf_th, nms_th, detect_th):
                 bestscore = 0
             if bestscore<detect_th:
                 fn.append(np.concatenate([l,[bestscore]],0))
-
+    
     return tp, fp, fn, len(lbb)    
 
 def topkpbb(pbb,lbb,nms_th,detect_th,topk=30):

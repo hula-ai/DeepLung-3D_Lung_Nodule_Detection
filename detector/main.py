@@ -8,7 +8,7 @@ import data
 from importlib import import_module
 import shutil
 from utils import *
-
+import pickle
 sys.path.append('../')
 
 from split_combine import SplitComb
@@ -24,7 +24,7 @@ from config_training import config as config_training
 from layers import acc
 
 parser = argparse.ArgumentParser(description='PyTorch DataBowl3 Detector')
-parser.add_argument('--model', '-m', metavar='MODEL', default='dpn3d26',
+parser.add_argument('--model', '-m', metavar='MODEL', default='res18',
                     help='model')
 parser.add_argument('--config', '-c', default='config_training', type=str)
 parser.add_argument('-j', '--workers', default=30, type=int, metavar='N',
@@ -43,16 +43,16 @@ parser.add_argument('--weight-decay', '--wd', default=1e-4, type=float,
                     metavar='W', help='weight decay (default: 1e-4)')
 parser.add_argument('--save-freq', default='1', type=int, metavar='S',
                     help='save frequency')
-parser.add_argument('--resume', default='/home/cougarnet.uh.edu/mpadmana/DeepLung_original/detector/dpnmodel/fd9044.ckpt', type=str, metavar='PATH',
+parser.add_argument('--resume', default='/home/cougarnet.uh.edu/mpadmana/DeepLung_original/detector/resmodel/res18fd9020.ckpt', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
 parser.add_argument('--save-dir', default='', type=str, metavar='SAVE',
                     help='directory to save checkpoint (default: none)')
 parser.add_argument('--test', default=1, type=int, metavar='TEST',
                     help='1 do test evaluation, 0 not')
-parser.add_argument('--testthresh', default=-3, type=float,
+parser.add_argument('--testthresh', default=-2, type=float,
                     help='threshod for get pbb')
-parser.add_argument('--split', default=8, type=int, metavar='SPLIT',
-                    help='In the test phase, split the image to 8 parts')
+parser.add_argument('--split', default=1, type=int, metavar='SPLIT',
+                    help='In the test phase, split the image to 8 parts') # Split changed to 1 just to check.
 parser.add_argument('--gpu', default='all', type=str, metavar='N',
                     help='use gpu')
 parser.add_argument('--n_test', default=4, type=int, metavar='N',
@@ -108,24 +108,18 @@ def main():
     valdatadir = config_training['val_preprocess_result_path']
     testdatadir = config_training['test_preprocess_result_path']
     trainfilelist = []
-    for folder in config_training['train_data_path']:
-        print (folder)
-        for f in os.listdir(folder):
-            if f.endswith('.mhd') and f[:-4] not in config_training['black_list']:
-                if (f=="1.3.6.1.4.1.14519.5.2.1.6279.6001.105756658031515062000744821260.mhd"):
-                    trainfilelist.append(folder.split('/')[-2]+'/'+f[:-4])
+    with open("/home/cougarnet.uh.edu/mpadmana/DeepLung_original/detector/train_imgs",'rb') as f:
+
+        trainfilelist=pickle.load(f)
+        
     valfilelist = []
-    for folder in config_training['val_data_path']:
-        for f in os.listdir(folder):
-            if f.endswith('.mhd') and f[:-4] not in config_training['black_list']:
-                if (f=="1.3.6.1.4.1.14519.5.2.1.6279.6001.100684836163890911914061745866.mhd"):
-                    valfilelist.append(folder.split('/')[-2]+'/'+f[:-4])
+    with open ("/home/cougarnet.uh.edu/mpadmana/DeepLung_original/detector/val_imgs",'rb') as f:
+        valfilelist=pickle.load(f)
     testfilelist = []
-    for folder in config_training['test_data_path']:
-        for f in os.listdir(folder):
-            if f.endswith('.mhd') and f[:-4] not in config_training['black_list']:
-                if (f=="1.3.6.1.4.1.14519.5.2.1.6279.6001.100621383016233746780170740405.mhd"):
-                    testfilelist.append(folder.split('/')[-2]+'/'+f[:-4])
+    with open("/home/cougarnet.uh.edu/mpadmana/DeepLung_original/detector/test_imgs",'rb') as f:
+
+        testfilelist=pickle.load(f)
+        testfilelist=["subset2/1.3.6.1.4.1.14519.5.2.1.6279.6001.133378195429627807109985347209"]   # Changed to accomodate only one test sample.
     
     if args.test == 1:
 
@@ -273,9 +267,11 @@ def validate(data_loader, net, loss):
 
     metrics = []
     for i, (data, target, coord) in enumerate(data_loader):
-        data = Variable(data.cuda(async = True), volatile = True)
-        target = Variable(target.cuda(async = True), volatile = True)
-        coord = Variable(coord.cuda(async = True), volatile = True)
+        with torch.no_grad():
+            
+            data = Variable(data.cuda(async = True))
+            target = Variable(target.cuda(async = True))
+            coord = Variable(coord.cuda(async = True))
 
         output = net(data, coord)
         loss_output = loss(output, target, train = False)
@@ -314,7 +310,9 @@ def test(data_loader, net, get_pbb, save_dir, config):
         print
         print("I am at iteration "+str(i_name))
         s = time.time()
+        
         target = [np.asarray(t, np.float32) for t in target]
+        print("TARGET IS: "+ str(target))
         lbb = target[0]
         nzhw = nzhw[0]
         name = data_loader.dataset.filenames[i_name].split('/')[-1].split('_clean')[0] #.split('-')[0]  wentao change
@@ -325,16 +323,17 @@ def test(data_loader, net, get_pbb, save_dir, config):
             if config['output_feature']:
                 isfeat = True
         n_per_run = args.n_test
-        print(data.size())
+         
         splitlist = range(0,len(data)+1,n_per_run)
         if splitlist[-1]!=len(data):
-            splitlist.append(len(data))
+            list(splitlist).append(len(data))
         outputlist = []
         featurelist = []
 
         for i in range(len(splitlist)-1):
-            input = Variable(data[splitlist[i]:splitlist[i+1]], volatile = True).cuda()
-            inputcoord = Variable(coord[splitlist[i]:splitlist[i+1]], volatile = True).cuda()
+            with torch.no_grad():
+                input = Variable(data[splitlist[i]:splitlist[i+1]]).cuda()
+                inputcoord = Variable(coord[splitlist[i]:splitlist[i+1]]).cuda()
             if isfeat:
                 output,feature = net(input,inputcoord)
                 featurelist.append(feature.data.cpu().numpy())
@@ -353,16 +352,27 @@ def test(data_loader, net, get_pbb, save_dir, config):
         if isfeat:
             feature_selected = feature[mask[0],mask[1],mask[2]]
             np.save(os.path.join(save_dir, name+'_feature.npy'), feature_selected)
-        #tp,fp,fn,_ = acc(pbb,lbb,0,0.1,0.1)
-        #print([len(tp),len(fp),len(fn)])
+        
+        tp,fp,fn,_ = acc(pbb,lbb,0,0.5,0.5)
+        print("The lengths of TRUE POSITIVES and FALSE POSITIVES are: ")
+        print(len(tp),len(fp))
+        with open (os.path.join(save_dir,name+'_tp.txt'),'a+') as f:
+            f.write("The predicted bounding boxes are:\n")
+            for bb in range(len(tp)):
+                f.write(str(tp[bb][1:5])+'\n')
+            f.write('\n')
+            f.write('\n')
+            f.write('\n')
+            f.write("The ground truth bounding boxes are: \n")
+            for box in range(len(target)):
+                f.write(str(target[box])+'\n')
+        f.close()
         print([i_name,name])
         e = time.time()
         np.save(os.path.join(save_dir, name+'_pbb.npy'), pbb)
         np.save(os.path.join(save_dir, name+'_lbb.npy'), lbb)
     np.save(os.path.join(save_dir, 'namelist.npy'), namelist)
     end_time = time.time()
-
-
     print('elapsed time is %3.2f seconds' % (end_time - start_time))
     print
     print
