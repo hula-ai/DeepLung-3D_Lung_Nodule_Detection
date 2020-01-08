@@ -24,7 +24,7 @@ from config_training import config as config_training
 from layers import acc
 
 parser = argparse.ArgumentParser(description='PyTorch DataBowl3 Detector')
-parser.add_argument('--model', '-m', metavar='MODEL', default='res18',
+parser.add_argument('--model', '-m', metavar='MODEL', default='dpn3d26',
                     help='model')
 parser.add_argument('--config', '-c', default='config_training', type=str)
 parser.add_argument('-j', '--workers', default=30, type=int, metavar='N',
@@ -43,7 +43,7 @@ parser.add_argument('--weight-decay', '--wd', default=1e-4, type=float,
                     metavar='W', help='weight decay (default: 1e-4)')
 parser.add_argument('--save-freq', default='1', type=int, metavar='S',
                     help='save frequency')
-parser.add_argument('--resume', default='/home/cougarnet.uh.edu/mpadmana/DeepLung_original/detector/resmodel/res18fd9020.ckpt', type=str, metavar='PATH',
+parser.add_argument('--resume', default='/home/cougarnet.uh.edu/mpadmana/DeepLung_original/detector/dpnmodel/fd9044.ckpt', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
 parser.add_argument('--save-dir', default='', type=str, metavar='SAVE',
                     help='directory to save checkpoint (default: none)')
@@ -108,18 +108,17 @@ def main():
     valdatadir = config_training['val_preprocess_result_path']
     testdatadir = config_training['test_preprocess_result_path']
     trainfilelist = []
-    with open("/home/cougarnet.uh.edu/mpadmana/DeepLung_original/detector/train_imgs",'rb') as f:
+    with open("/home/cougarnet.uh.edu/mpadmana/DeepLung_original/methodist_patient_names/methodist_train.pkl",'rb') as f:
 
         trainfilelist=pickle.load(f)
         
     valfilelist = []
-    with open ("/home/cougarnet.uh.edu/mpadmana/DeepLung_original/detector/val_imgs",'rb') as f:
+    with open ("/home/cougarnet.uh.edu/mpadmana/DeepLung_original/methodist_patient_names/methodist_val.pkl",'rb') as f:
         valfilelist=pickle.load(f)
     testfilelist = []
-    with open("/home/cougarnet.uh.edu/mpadmana/DeepLung_original/detector/test_imgs",'rb') as f:
+    with open("/home/cougarnet.uh.edu/mpadmana/DeepLung_original/methodist_patient_names/methodist_test.pkl",'rb') as f:
 
         testfilelist=pickle.load(f)
-        testfilelist=["subset2/1.3.6.1.4.1.14519.5.2.1.6279.6001.133378195429627807109985347209"]   # Changed to accomodate only one test sample.
     
     if args.test == 1:
 
@@ -260,6 +259,7 @@ def train(data_loader, net, loss, epoch, optimizer, get_lr, save_freq, save_dir)
         np.mean(metrics[:, 5])))
     print
 
+
 def validate(data_loader, net, loss):
     start_time = time.time()
     
@@ -384,7 +384,7 @@ def singletest(data,net,config,splitfun,combinefun,n_per_run,margin = 64,isfeat=
     z, h, w = data.size(2), data.size(3), data.size(4)
     print(data.size())
     data = splitfun(data,config['max_stride'],margin)
-    data = Variable(data.cuda(async = True), volatile = True,requires_grad=False)
+    data = Variable(data.cuda(async= True), volatile = True,requires_grad=False)
     splitlist = range(0,args.split+1,n_per_run)
     outputlist = []
     featurelist = []
