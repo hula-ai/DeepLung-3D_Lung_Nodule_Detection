@@ -76,10 +76,17 @@ class SplitComb():
         side_len /= stride
         margin /= stride
         
+        
+        
+        print("nz is:" + str(nz))
+        print("nh is: "+ str(nh))
+        print("nw is: "+ str(nw))
+        print("nz*nh*nw is: "+ str(nz*nh*nw))
         splits = []
+        print("The shape of output is:  "+ str(output.shape))
         for i in range(len(output)):
             splits.append(output[i])
-
+     
         output = -1000000 * np.ones((
             int(nz * side_len),
             int(nh * side_len),
