@@ -179,7 +179,7 @@ class Crop(object):
         self.bound_size = config['bound_size']
         self.stride = config['stride']
         self.pad_value = config['pad_value']
-    def __call__(self, imgs, target, bboxes,isScale=False,isRand=False):
+    def __call__(self, imgs, target, bboxes,isScale=True,isRand=False):
         if isScale:
             radiusLim = [8.,120.]
             scaleLim = [0.75,1.25]
@@ -248,6 +248,14 @@ class Crop(object):
             for i in range(len(bboxes)):
                 for j in range(4):
                     bboxes[i][j] = bboxes[i][j]*scale
+        print("The size of crop is: "+str( crop.shape))
+        if (crop.shape[1]<96 or crop.shape[2]<96 or crop.shape[3]<96):
+            crop=np.pad(crop, [(0,0), ((96-crop.shape[1])//2, (96-crop.shape[1])//2+ (crop.shape[1]%2)) ,  ((96-crop.shape[2])//2, (96-crop.shape[2])//2 + (crop.shape[2]%2)),    ((96-crop.shape[3])//2, (96-crop.shape[3])//2 + (crop.shape[3]%2) )], mode='constant', constant_values= self.pad_value)
+            
+        if (crop.shape[1]>96 or crop.shape[2]>96 or crop.shape[3]>96):
+            crop=crop[:, 0:96,0:96,0:96]  # Temporarily ttok the edges. Will have to take the center.
+            
+        print("The new size of crop is: "+str( crop.shape))
         return crop, target, bboxes, coord
     
 class LabelMapping(object):
@@ -271,12 +279,15 @@ class LabelMapping(object):
         th_pos = self.th_pos
         
         output_size = []
+        print()
+        print("Input size is: "+ str(input_size))
         for i in range(3):
             if input_size[i] % stride != 0:
                 print(filename)
             # assert(input_size[i] % stride == 0) 
+           
             output_size.append(input_size[i] / stride)
-        
+        print(filename)
         label = -1 * np.ones(output_size + [len(anchors), 5], np.float32)
         offset = ((stride.astype('float')) - 1) / 2
         oz = np.arange(offset, offset + stride * (output_size[0] - 1) + 1, stride)
@@ -319,6 +330,15 @@ class LabelMapping(object):
         else:
             idx = random.sample(range(len(iz)), 1)[0]
             pos = [iz[idx], ih[idx], iw[idx], ia[idx]]
+        print()
+        print("The length of anchors is: "+ str(len(anchors)))
+        print()
+        print("POS is: "+ str(pos))
+        print()
+        print()
+        print("oz: "+ str(oz))
+        print("oh: "+str(oh))
+        print("ow:  "+ str(ow))
         dz = (target[0] - oz[pos[0]]) / anchors[pos[3]]
         dh = (target[1] - oh[pos[1]]) / anchors[pos[3]]
         dw = (target[2] - ow[pos[2]]) / anchors[pos[3]]
@@ -393,7 +413,10 @@ def select_samples(bbox, anchor, th, oz, oh, ow):
 
 def collate(batch):
     if torch.is_tensor(batch[0]):
+        print()
+        print("PRINTING FROM COLLATE")
         return [b.unsqueeze(0) for b in batch]
+       
     elif isinstance(batch[0], np.ndarray):
         return batch
     elif isinstance(batch[0], int):
