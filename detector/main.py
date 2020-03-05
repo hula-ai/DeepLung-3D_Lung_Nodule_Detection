@@ -24,7 +24,7 @@ from config_training import config as config_training
 from layers import acc
 
 parser = argparse.ArgumentParser(description='PyTorch DataBowl3 Detector')
-parser.add_argument('--model', '-m', metavar='MODEL', default='dpn3d26',
+parser.add_argument('--model', '-m', metavar='MODEL', default='res18',
                     help='model')
 parser.add_argument('--config', '-c', default='config_training', type=str)
 parser.add_argument('-j', '--workers', default=30, type=int, metavar='N',
@@ -33,7 +33,7 @@ parser.add_argument('--epochs', default=100, type=int, metavar='N',
                     help='number of total epochs to run')
 parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                     help='manual epoch number (useful on restarts)')
-parser.add_argument('-b', '--batch-size', default=16, type=int,
+parser.add_argument('-b', '--batch-size', default=1, type=int,
                     metavar='N', help='mini-batch size (default: 16)')
 parser.add_argument('--lr', '--learning-rate', default=0.01, type=float,
                     metavar='LR', help='initial learning rate')
@@ -43,19 +43,19 @@ parser.add_argument('--weight-decay', '--wd', default=1e-4, type=float,
                     metavar='W', help='weight decay (default: 1e-4)')
 parser.add_argument('--save-freq', default='1', type=int, metavar='S',
                     help='save frequency')
-parser.add_argument('--resume', default='/home/cougarnet.uh.edu/mpadmana/DeepLung_original/detector/dpnmodel/fd9044.ckpt', type=str, metavar='PATH',
+parser.add_argument('--resume', default='/home/mpadmana/anaconda3/envs/DeepLung_original/detector/resmodel/res18fd9020.ckpt', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
 parser.add_argument('--save-dir', default='', type=str, metavar='SAVE',
                     help='directory to save checkpoint (default: none)')
 parser.add_argument('--test', default=1, type=int, metavar='TEST',
                     help='1 do test evaluation, 0 not')
-parser.add_argument('--testthresh', default=-2, type=float,
+parser.add_argument('--testthresh', default=-3, type=float,
                     help='threshod for get pbb')
 parser.add_argument('--split', default=1, type=int, metavar='SPLIT',
                     help='In the test phase, split the image to 8 parts') # Split changed to 1 just to check.
 parser.add_argument('--gpu', default='all', type=str, metavar='N',
                     help='use gpu')
-parser.add_argument('--n_test', default=4, type=int, metavar='N',
+parser.add_argument('--n_test', default=3, type=int, metavar='N',
                     help='number of gpu for test')
 
 def main():
@@ -72,6 +72,7 @@ def main():
     start_epoch = args.start_epoch
     save_dir = args.save_dir
     
+#    args.resume = True
     if args.resume:
         checkpoint = torch.load(args.resume)
         # if start_epoch == 0:
@@ -108,18 +109,23 @@ def main():
     valdatadir = config_training['val_preprocess_result_path']
     testdatadir = config_training['test_preprocess_result_path']
     trainfilelist = []
-    with open("/home/cougarnet.uh.edu/mpadmana/DeepLung_original/methodist_patient_names/methodist_train.pkl",'rb') as f:
+   # with open("/home/mpadmana/anaconda3/envs/DeepLung_original/luna_patient_names/luna_train_list.pkl",'rb') as f:
+    #    trainfilelist=pickle.load(f)
+    with open("/home/mpadmana/anaconda3/envs/DeepLung_original/methodist_patient_names/methodist_train.pkl",'rb') as f:
 
         trainfilelist=pickle.load(f)
         
     valfilelist = []
-    with open ("/home/cougarnet.uh.edu/mpadmana/DeepLung_original/methodist_patient_names/methodist_val.pkl",'rb') as f:
+    #with open("/home/mpadmana/anaconda3/envs/DeepLung_original/luna_patient_names/luna_val_list.pkl",'rb') as f:
+     #   valfilelist=pickle.load(f)
+    with open ("/home/mpadmana/anaconda3/envs/DeepLung_original/methodist_patient_names/methodist_val.pkl",'rb') as f:
         valfilelist=pickle.load(f)
     testfilelist = []
-    with open("/home/cougarnet.uh.edu/mpadmana/DeepLung_original/methodist_patient_names/methodist_test.pkl",'rb') as f:
-
+    #with open("/home/mpadmana/anaconda3/envs/DeepLung_original/luna_patient_names/luna_test_list.pkl",'rb') as f:
+     #   testfilelist=pickle.load(f)
+    with open("/home/mpadmana/anaconda3/envs/DeepLung_original/methodist_patient_names/methodist_test.pkl",'rb') as f:
         testfilelist=pickle.load(f)
-    
+    testfilelist=['download20180608140526download20180608140500001_1_3_12_30000018060618494775800001943']
     if args.test == 1:
 
         margin = 32
@@ -136,7 +142,7 @@ def main():
             dataset,
             batch_size = 1,
             shuffle = False,
-            num_workers = args.workers,
+            num_workers = 0,
             collate_fn = data.collate,
             pin_memory=False)
 
@@ -159,7 +165,7 @@ def main():
         dataset,
         batch_size = args.batch_size,
         shuffle = True,
-        num_workers = args.workers,
+        num_workers = 0,
         pin_memory=True)
 
     dataset = data.DataBowl3Detector(
@@ -171,7 +177,7 @@ def main():
         dataset,
         batch_size = args.batch_size,
         shuffle = False,
-        num_workers = args.workers,
+        num_workers = 0,
         pin_memory=True)
 
     for i, (data, target, coord) in enumerate(train_loader): # check data consistency
@@ -215,9 +221,9 @@ def train(data_loader, net, loss, epoch, optimizer, get_lr, save_freq, save_dir)
     metrics = []
 
     for i, (data, target, coord) in enumerate(data_loader):
-        data = Variable(data.cuda(async = True))
-        target = Variable(target.cuda(async = True))
-        coord = Variable(coord.cuda(async = True))
+        data = Variable(torch.FloatTensor(data).cuda(async = True))
+        target = Variable(torch.FloatTensor(target).cuda(async = True))
+        coord = Variable(torch.FloatTensor(coord).cuda(async = True))
 
         output = net(data, coord)
         loss_output = loss(output, target)
@@ -225,7 +231,7 @@ def train(data_loader, net, loss, epoch, optimizer, get_lr, save_freq, save_dir)
         loss_output[0].backward()
         optimizer.step()
 
-        loss_output[0] = loss_output[0].data[0]
+        loss_output[0] = loss_output[0].data.item()
         metrics.append(loss_output)
 
     if epoch % args.save_freq == 0:            
@@ -276,7 +282,7 @@ def validate(data_loader, net, loss):
         output = net(data, coord)
         loss_output = loss(output, target, train = False)
 
-        loss_output[0] = loss_output[0].data[0]
+        loss_output[0] = loss_output[0].data.item()
         metrics.append(loss_output)    
     end_time = time.time()
 
@@ -307,6 +313,7 @@ def test(data_loader, net, get_pbb, save_dir, config):
     namelist = []
     split_comber = data_loader.dataset.split_comber
     for i_name, (data, target, coord, nzhw) in enumerate(data_loader):
+        
         print
         print("I am at iteration "+str(i_name))
         
@@ -326,14 +333,20 @@ def test(data_loader, net, get_pbb, save_dir, config):
                 isfeat = True
         n_per_run = args.n_test
          
-        splitlist = range(0,len(data)+1,n_per_run)
+        splitlist = range(0,len(data)+1,n_per_run)   # Check if n_per_run is doing something to the splitlist.
+         
         if splitlist[-1]!=len(data):
             list(splitlist).append(len(data))
         outputlist = []
         featurelist = []
-
-        for i in range(len(splitlist)-1):
+        
+        print("The splitlist is: "+ str(splitlist))
+        for i in range(len(splitlist)-1):   
             with torch.no_grad():
+                
+                #input= Variable(data[splitlist[i]]).cuda()
+                #inputcoord = Variable(coord[splitlist[i]]).cuda()
+                
                 input = Variable(data[splitlist[i]:splitlist[i+1]]).cuda()
                 inputcoord = Variable(coord[splitlist[i]:splitlist[i+1]]).cuda()
             if isfeat:
@@ -341,13 +354,15 @@ def test(data_loader, net, get_pbb, save_dir, config):
                 featurelist.append(feature.data.cpu().numpy())
             else:
                 output = net(input,inputcoord)
-            outputlist.append(output.data.cpu().numpy())
+            outputlist.append(output.data.cpu().numpy())  ## Shape is (6,4,......)
+        print()
+        print("The shape of outputlist is:  "+ str(np.array(outputlist).shape))    
         output = np.concatenate(outputlist,0)
         output = split_comber.combine(output,nzhw=nzhw)
         if isfeat:
             feature = np.concatenate(featurelist,0).transpose([0,2,3,4,1])[:,:,:,:,:,np.newaxis]
             feature = split_comber.combine(feature,sidelen)[...,0]
-
+        
         thresh = args.testthresh # -8 #-3
         print('pbb thresh', thresh)
         pbb,mask = get_pbb(output,thresh,ismask=True)
@@ -358,8 +373,12 @@ def test(data_loader, net, get_pbb, save_dir, config):
         tp,fp,fn,_ = acc(pbb,lbb,0,0.5,0.5)
         print("The lengths of TRUE POSITIVES and FALSE POSITIVES are: ")
         print(len(tp),len(fp))
+        
         if not os.path.exists(os.path.join(save_dir,name+'_tp.txt')):
             with open (os.path.join(save_dir,name+'_tp.txt'),'a+') as f:
+                f.write("Patient name is: "+ str(name))
+                f.write('\n')
+                f.write('\n')
                 f.write("The predicted bounding boxes are:\n")
                 for bb in range(len(tp)):
                     f.write(str(tp[bb][1:5])+'\n')
@@ -370,6 +389,10 @@ def test(data_loader, net, get_pbb, save_dir, config):
                 for box in range(len(target)):
                     f.write(str(target[box])+'\n')
             f.close()
+        print("The true positive bounding boxes are:  ")
+        print(tp)
+        print("The false positive bounding boxes are: ")
+        print(fp)
         print([i_name,name])
         e = time.time()
         np.save(os.path.join(save_dir, name+'_pbb.npy'), pbb)
