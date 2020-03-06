@@ -95,8 +95,6 @@ Feel free to ask any questions. Wentao Zhu, wentaozhu1991@gmail.com
 LIDC-IDRI nodule size report downloaded from 
 http://www.via.cornell.edu/lidc/list3.2.csv is in /nodcls/data/list3.2.csv
 
-
--methodist_patient_name contains the train, val and test patient list (pickle).
--pretrainined model from original code used for training methodist.
-
--
+# New changes
+methodist_patient_name contains the train, val and test patient list (pickle).<br>
+pretrainined model from original code used for training methodist. <br>
