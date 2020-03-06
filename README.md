@@ -98,3 +98,5 @@ http://www.via.cornell.edu/lidc/list3.2.csv is in /nodcls/data/list3.2.csv
 # New changes
 methodist_patient_name contains the train, val and test patient list (pickle).<br>
 pretrainined model from original code used for training methodist. <br>
+methodist_train_files, methodist_val_files, methodist_test_files are the processed numpy files that are scaled (by height, width and length and by pixel) and converted to a form that the network can take.<br>
+
